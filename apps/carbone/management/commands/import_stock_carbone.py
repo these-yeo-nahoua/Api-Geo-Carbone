@@ -66,13 +66,14 @@ class Command(BaseCommand):
         gdf['superficie_ha'] = gdf.geometry.area / 10000.0
 
         # -- Step 3: Simplify in UTM (meters, much faster than degrees) --
-        self.stdout.write('Simplifying (tolerance=%sm)...' % int(tolerance))
-        for idx in gdf.index:
-            self.stdout.write('  Feature %d...' % (idx + 1))
-            geom = gdf.at[idx, 'geometry']
-            geom = geom.simplify(tolerance, preserve_topology=True)
-            geom = make_valid(geom)
-            gdf.at[idx, 'geometry'] = geom
+        # IMPORTANT : preserve_topology=False (Douglas-Peucker) est O(n log n) et
+        # rapide ; preserve_topology=True se fige sur ces géométries massives
+        # (millions de vertex). On simplifie D'ABORD (réduit les vertex), PUIS on
+        # valide (make_valid rapide car peu de points), pour éviter le blocage.
+        self.stdout.write('Simplifying (tolerance=%sm, Douglas-Peucker)...' % int(tolerance))
+        gdf['geometry'] = gdf.geometry.simplify(tolerance, preserve_topology=False)
+        self.stdout.write('  Simplified. Validating...')
+        gdf['geometry'] = gdf.geometry.apply(make_valid)
         self.stdout.write('  Done.')
 
         # -- Step 4: Reproject to WGS84 --

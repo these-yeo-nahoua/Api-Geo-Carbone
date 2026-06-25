@@ -64,10 +64,13 @@ class Command(BaseCommand):
         os.makedirs(CACHE_DIR, exist_ok=True)
 
         if options['clear']:
+            # Préserver les fichiers générés par d'AUTRES commandes
+            # (stock_carbone* vient de import_stock_carbone, pas du prebuild)
+            preserve = ('stock_carbone',)
             for f in os.listdir(CACHE_DIR):
-                if f.endswith('.json'):
+                if f.endswith('.json') and not f.startswith(preserve):
                     os.remove(os.path.join(CACHE_DIR, f))
-            self.stdout.write(self.style.WARNING('Cache cleared'))
+            self.stdout.write(self.style.WARNING('Cache cleared (stock_carbone préservé)'))
 
         occ_tolerance = options.get('tolerance') or TOLERANCES['occupation']
         target_year = options.get('year')

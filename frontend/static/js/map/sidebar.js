@@ -7,17 +7,20 @@ const Sidebar = {
         const close = document.getElementById('sidebar-close');
         const sidebar = document.getElementById('sidebar');
 
+        // Classe de masquage hors-écran (alignée sur le template — sidebar flottante)
+        const HIDDEN = '-translate-x-[120%]';
+
         if (toggle) {
             toggle.addEventListener('click', () => {
                 sidebar.classList.toggle('open');
-                sidebar.classList.toggle('-translate-x-full');
+                sidebar.classList.toggle(HIDDEN);
             });
         }
 
         if (close) {
             close.addEventListener('click', () => {
                 sidebar.classList.remove('open');
-                sidebar.classList.add('-translate-x-full');
+                sidebar.classList.add(HIDDEN);
             });
         }
 

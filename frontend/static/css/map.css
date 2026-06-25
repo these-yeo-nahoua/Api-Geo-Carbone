@@ -1,104 +1,642 @@
-/* ===== Map-specific styles — Leaflet + Pane optimizations ===== */
+/* ===== API.GEO.Carbone — Map CSS v5.0 (MapLibre GL JS) ===== */
 
-/* Force GPU acceleration for all panes */
-.leaflet-pane {
+/* ── MapLibre canvas ──────────────────────────────────────────── */
+.maplibregl-canvas {
+    display: block;
     will-change: transform;
 }
-.leaflet-tile-container img {
-    will-change: transform;
-    image-rendering: auto;
-}
-.leaflet-fade-anim .leaflet-tile { will-change: opacity; }
-.leaflet-zoom-anim .leaflet-zoom-animated { will-change: transform; }
 
-/* Canvas rendering optimization */
-.leaflet-canvas-container {
-    pointer-events: auto;
-}
-
-/* Pane pointer-events architecture:
-   Leaflet strips "Pane" from names: occupationPane → leaflet-occupation-pane
-
-   - occupation (z:400, canvas): FULL interaction for popups
-   - forets (z:450, SVG): only border strokes are interactive
-   - limites (z:460, SVG): only border strokes are interactive
-   - infra (z:470): full interaction (lines/points don't block much)
-
-   This allows clicks to pass through transparent polygon fills
-   in overlay panes and reach the occupation canvas below. */
-.leaflet-occupation-pane { pointer-events: auto; }
-.leaflet-infra-pane { pointer-events: auto; }
-
-/* Forest pane: SVG paths only interactive on stroke, not fill area.
-   Clicks inside forest polygons pass through to occupation canvas below. */
-.leaflet-forets-pane { pointer-events: none !important; }
-.leaflet-forets-pane svg { pointer-events: none !important; }
-.leaflet-forets-pane path { pointer-events: stroke !important; }
-
-/* Limites pane: SVG paths only interactive on stroke, not fill area.
-   Clicks inside department boundary pass through to occupation canvas below. */
-.leaflet-limites-pane { pointer-events: none !important; }
-.leaflet-limites-pane svg { pointer-events: none !important; }
-.leaflet-limites-pane path { pointer-events: stroke !important; }
-
-/* Tooltip */
-.leaflet-tooltip {
-    font-family: 'DM Sans', sans-serif !important;
-    font-size: 11px;
-    padding: 4px 10px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
-.foret-tooltip {
-    font-weight: 600;
-    color: #14532d;
-    border: 1px solid #22c55e;
-}
-
-/* Carbon stock tooltip — dark green theme for CO2 mode */
-.carbone-tooltip {
-    font-weight: 600;
-    color: #ffffff !important;
-    background: rgba(20,83,45,0.92) !important;
-    border: 1px solid rgba(34,197,94,0.5) !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
-    font-size: 11px;
-}
-.carbone-tooltip::before {
-    border-top-color: rgba(20,83,45,0.92) !important;
-}
-
-/* Popup */
-.leaflet-popup-content-wrapper {
-    border-radius: 14px !important;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.15) !important;
-    padding: 0 !important;
-    overflow: hidden;
-}
-.leaflet-popup-content {
-    margin: 14px !important;
-    font-family: 'DM Sans', sans-serif !important;
-    min-width: 200px;
-}
-
-/* Attribution */
-.leaflet-control-attribution {
+/* ── Contrôles MapLibre ───────────────────────────────────────── */
+.maplibregl-ctrl-attrib {
     font-size: 9px !important;
     background: rgba(255,255,255,0.7) !important;
     border-radius: 6px 0 0 0 !important;
 }
 
-/* Zoom controls */
-.leaflet-control-zoom a {
+.maplibregl-ctrl-zoom-in,
+.maplibregl-ctrl-zoom-out,
+.maplibregl-ctrl-compass {
     border-radius: 10px !important;
     width: 34px !important;
     height: 34px !important;
     line-height: 34px !important;
-    font-size: 16px !important;
 }
-.leaflet-control-zoom {
-    border: none !important;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.15) !important;
-    border-radius: 12px !important;
+
+/* ── Popups MapLibre ──────────────────────────────────────────── */
+.geo-popup .maplibregl-popup-content {
+    border-radius: 14px !important;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15) !important;
+    padding: 0 !important;
     overflow: hidden;
+    font-family: 'DM Sans', sans-serif;
+    min-width: 200px;
+    max-width: 280px;
+}
+
+.geo-popup .maplibregl-popup-tip {
+    border-top-color: white !important;
+}
+
+.geo-hover-popup .maplibregl-popup-content {
+    border-radius: 8px !important;
+    padding: 6px 10px !important;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+}
+
+/* ── Contenu popup partagé ────────────────────────────────────── */
+.popup-header {
+    background: linear-gradient(135deg, #14532d, #166534);
+    color: white;
+    padding: 10px 14px;
+    font-weight: 700;
+    font-size: 13px;
+    font-family: 'DM Serif Display', Georgia, serif;
+}
+
+.popup-body {
+    padding: 8px 14px 12px;
+}
+
+.popup-body .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12px;
+    padding: 3px 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.popup-body .row:last-child { border-bottom: none; }
+.popup-body .label { color: #6b7280; font-size: 11px; }
+.popup-body .value { font-weight: 600; color: #111827; font-size: 12px; }
+
+/* Bouton « Cibler cette forêt » dans les popups */
+.popup-target-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 7px 10px;
+    border: none;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #14532d, #166534);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.18s ease;
+}
+
+.popup-target-btn:hover {
+    background: linear-gradient(135deg, #166534, #15803d);
+    box-shadow: 0 4px 12px rgba(20,83,45,0.35);
+    transform: translateY(-1px);
+}
+
+.popup-target-btn:active { transform: translateY(0); }
+
+/* ── Notification flottante carte (état vide, infos) ──────────── */
+.map-notice {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translate(-50%, -16px);
+    z-index: 1100;
+    background: rgba(17, 24, 39, 0.92);
+    backdrop-filter: blur(8px);
+    color: white;
+    font-size: 12.5px;
+    font-weight: 500;
+    padding: 9px 16px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    max-width: 80vw;
+}
+
+.map-notice.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
+
+.map-notice i { color: #fbbf24; }
+
+/* ── Time Slider ──────────────────────────────────────────────── */
+.time-btn {
+    background: white;
+    color: #4b5563;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: none;
+    outline: none;
+}
+
+.time-btn:hover { background: #f0fdf4; color: #15803d; }
+
+.time-btn.active {
+    background: linear-gradient(135deg, #14532d, #166534);
+    color: white;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+}
+
+.time-btn.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.carbone-btn {
+    background: white;
+    color: #166534;
+    border: 1.5px solid #bbf7d0;
+    cursor: pointer;
+    outline: none;
+}
+
+.carbone-btn:hover { background: #f0fdf4; border-color: #86efac; }
+
+.carbone-btn.active {
+    background: linear-gradient(135deg, #14532d, #065f46);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 0 0 3px rgba(34,197,94,0.3);
+}
+
+.carbone-active-glow {
+    box-shadow: 0 0 0 3px rgba(34,197,94,0.25), 0 8px 30px rgba(0,0,0,0.12) !important;
+}
+
+/* ── Sidebar tabs ─────────────────────────────────────────────── */
+.sidebar-tab.active {
+    color: #166534;
+    border-bottom: 2px solid #16a34a;
+    font-weight: 700;
+}
+
+.sidebar-tab {
+    transition: all 0.15s ease;
+    cursor: pointer;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    outline: none;
+}
+
+/* ── Loading overlay ──────────────────────────────────────────── */
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e5e7eb;
+    border-top: 3px solid #16a34a;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Layer loading indicator ──────────────────────────────────── */
+.layer-loading {
+    opacity: 0.6;
+    position: relative;
+}
+
+.layer-loading::after {
+    content: '';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    border: 2px solid #e5e7eb;
+    border-top-color: #16a34a;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+/* ── Chat Panel v5 — Glassmorphism ───────────────────────────── */
+#chat-toggle {
+    background: linear-gradient(135deg, #14532d, #166534);
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+#chat-toggle:hover { transform: scale(1.08); box-shadow: 0 8px 25px rgba(20,83,45,0.4); }
+
+#chat-panel {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-color: rgba(255,255,255,0.6);
+    box-shadow: 0 25px 60px rgba(0,0,0,0.18), 0 0 0 1px rgba(255,255,255,0.5);
+}
+
+.chat-header-v4 {
+    background: linear-gradient(135deg, #14532d 0%, #166534 50%, #0f4c23 100%);
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+}
+
+.chat-header-v4::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at center, rgba(255,255,255,0.05) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+.ai-avatar {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(34,197,94,0.4);
+    flex-shrink: 0;
+}
+
+.ai-avatar-sm {
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    background: #4ade80;
+    border-radius: 50%;
+    animation: statusPulse 2s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.85); }
+}
+
+.context-badge {
+    background: rgba(255,255,255,0.15);
+    color: #bbf7d0;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 9px;
+    font-weight: 600;
+}
+
+/* Messages */
+.chat-msg-ai {
+    background: rgba(240, 253, 244, 0.8);
+    border: 1px solid rgba(187, 247, 208, 0.5);
+    border-radius: 0 14px 14px 14px;
+    padding: 12px;
+    font-size: 12px;
+    color: #1f2937;
+    max-width: 92%;
+    line-height: 1.5;
+    animation: msgIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    margin-bottom: 4px;
+}
+
+.chat-msg-user {
+    background: linear-gradient(135deg, #14532d, #166534);
+    color: white;
+    border-radius: 14px 0 14px 14px;
+    padding: 10px 14px;
+    font-size: 12px;
+    max-width: 80%;
+    margin-left: auto;
+    animation: msgIn 0.25s ease-out;
+    margin-bottom: 4px;
+}
+
+@keyframes msgIn {
+    from { opacity: 0; transform: translateY(6px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Typing indicator */
+.typing-v4 {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+}
+
+.typing-dots { display: flex; gap: 3px; }
+.typing-dot {
+    width: 6px; height: 6px;
+    background: #16a34a;
+    border-radius: 50%;
+    animation: typingBounce 1.2s ease-in-out infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes typingBounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+    40% { transform: translateY(-5px); opacity: 1; }
+}
+
+/* Floating particles */
+.chat-particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 0;
+}
+
+.leaf-particle {
+    position: absolute;
+    font-size: var(--size, 12px);
+    bottom: -20px;
+    left: var(--left, 50%);
+    opacity: 0;
+    animation: floatLeaf var(--duration, 12s) var(--delay, 0s) ease-in-out infinite;
+}
+
+@keyframes floatLeaf {
+    0%   { transform: translateY(0) rotate(0deg);   opacity: 0; }
+    10%  { opacity: var(--max-opacity, 0.15); }
+    90%  { opacity: var(--max-opacity, 0.15); }
+    100% { transform: translateY(-130px) rotate(30deg); opacity: 0; }
+}
+
+/* Typewriter cursor */
+.typewriter-cursor {
+    display: inline-block;
+    width: 2px;
+    background: #16a34a;
+    animation: blink 0.8s step-end infinite;
+    vertical-align: text-bottom;
+    height: 1em;
+    border-radius: 1px;
+}
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* Quick actions */
+.quick-action-pill {
+    display: inline-block;
+    background: rgba(240,253,244,0.9);
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1.4;
+}
+
+.quick-action-pill:hover {
+    background: #dcfce7;
+    border-color: #86efac;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(34,197,94,0.2);
+}
+
+.quick-actions-v4 {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+/* Metric cards in messages */
+.metric-card {
+    background: rgba(255,255,255,0.7);
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 8px 10px;
+    text-align: center;
+}
+
+/* Capability cards */
+.capability-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    background: rgba(255,255,255,0.6);
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 11px;
+}
+
+.capability-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+/* Progress bars */
+.progress-bar-track {
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    transition: width 0.8s cubic-bezier(0.34, 1.2, 0.64, 1);
+    border-radius: 2px;
+}
+
+/* Loss bar */
+.loss-bar-track {
+    height: 20px;
+    background: #fee2e2;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.loss-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #dc2626, #ef4444);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    transition: width 1s cubic-bezier(0.34, 1.2, 0.64, 1);
+    min-width: 40px;
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+/* Ranking cards */
+.ranking-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    animation: msgIn 0.3s ease both;
+}
+
+.ranking-card:hover {
+    background: #f0fdf4;
+    border-color: #86efac;
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(34,197,94,0.15);
+}
+
+.ranking-medal { font-size: 18px; flex-shrink: 0; }
+
+/* Confidence bar */
+.confidence-bar {
+    height: 3px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.confidence-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s ease;
+}
+
+/* Fun fact card */
+.fun-fact-card {
+    background: linear-gradient(135deg, rgba(240,253,244,0.9), rgba(220,252,231,0.7));
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 10px;
+    color: #166534;
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
+/* Chat chart */
+.chat-chart-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 4px 0;
+}
+
+.chat-chart-container {
+    width: 180px;
+    height: 130px;
+    position: relative;
+}
+
+.chat-chart-container.chart-sm {
+    width: 160px;
+    height: 110px;
+}
+
+/* Reactions */
+.msg-reactions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    justify-content: flex-end;
+}
+
+.reaction-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    background: rgba(255,255,255,0.6);
+    color: #9ca3af;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    transition: all 0.15s ease;
+}
+
+.reaction-btn:hover { background: #f0fdf4; border-color: #bbf7d0; color: #16a34a; }
+.reaction-btn.reacted { background: #dcfce7; border-color: #4ade80; color: #16a34a; }
+
+/* Toast */
+.chat-toast {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 100;
+    animation: toastIn 0.3s ease;
+    white-space: nowrap;
+}
+
+.toast-success {
+    background: linear-gradient(135deg, #14532d, #166534);
+    color: white;
+    box-shadow: 0 4px 14px rgba(20,83,45,0.35);
+}
+
+.toast-info {
+    background: linear-gradient(135deg, #1e40af, #1d4ed8);
+    color: white;
+}
+
+.chat-toast-exit { animation: toastOut 0.3s ease forwards; }
+
+@keyframes toastIn  { from { opacity: 0; transform: translateX(-50%) translateY(-8px); } }
+@keyframes toastOut { to   { opacity: 0; transform: translateX(-50%) translateY(-8px); } }
+
+/* Stagger animation */
+.stagger-children > * {
+    animation: msgIn 0.3s ease both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0.00s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.12s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.18s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.24s; }
+
+/* Pulse ring MapLibre (via Marker element) */
+@keyframes pulseRing {
+    0%   { transform: scale(0.8); opacity: 0.9; }
+    50%  { transform: scale(1.15); opacity: 0.5; }
+    100% { transform: scale(0.8); opacity: 0.9; }
+}
+
+/* Chat example chips */
+.chat-example {
+    animation: msgIn 0.35s ease both;
 }

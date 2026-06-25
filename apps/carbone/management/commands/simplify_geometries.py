@@ -69,7 +69,7 @@ class Command(BaseCommand):
         with connection.cursor() as c:
             c.execute("""
                 SELECT COUNT(*), SUM(ST_NPoints(geom)) as before_points,
-                       SUM(ST_NPoints(ST_SimplifyPreserveTopology(ST_MakeValid(geom), %s))) as after_points
+                       SUM(ST_NPoints(ST_Simplify(geom, %s))) as after_points
                 FROM carbone_occupationsol
                 WHERE ST_NPoints(geom) > %s
             """, [tolerance, threshold])
@@ -97,7 +97,7 @@ class Command(BaseCommand):
         with connection.cursor() as c:
             c.execute("""
                 UPDATE carbone_occupationsol
-                SET geom = ST_SimplifyPreserveTopology(ST_MakeValid(geom), %s)
+                SET geom = ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Simplify(geom, %s)), 3))
                 WHERE ST_NPoints(geom) > %s
             """, [tolerance, threshold])
             updated = c.rowcount
@@ -106,7 +106,7 @@ class Command(BaseCommand):
         with connection.cursor() as c:
             c.execute("""
                 UPDATE carbone_foretclassee
-                SET geom = ST_SimplifyPreserveTopology(ST_MakeValid(geom), %s)
+                SET geom = ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Simplify(geom, %s)), 3))
                 WHERE ST_NPoints(geom) > %s
             """, [tolerance * 0.8, threshold])
             updated_forets = c.rowcount
@@ -115,7 +115,7 @@ class Command(BaseCommand):
         with connection.cursor() as c:
             c.execute("""
                 UPDATE carbone_zoneetude
-                SET geom = ST_SimplifyPreserveTopology(ST_MakeValid(geom), %s)
+                SET geom = ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Simplify(geom, %s)), 3))
                 WHERE ST_NPoints(geom) > %s
             """, [tolerance, threshold])
             updated_zones = c.rowcount

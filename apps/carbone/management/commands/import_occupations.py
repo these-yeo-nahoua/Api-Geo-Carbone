@@ -99,6 +99,29 @@ class Command(BaseCommand):
         return None
 
     # ------------------------------------------------------------------
+    # Normalise une géométrie GEOS en MultiPolygon (ou None si non surfacique)
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _to_multipolygon(geom):
+        """Convertit Polygon / GeometryCollection → MultiPolygon. None sinon."""
+        if geom is None or geom.empty:
+            return None
+        gtype = geom.geom_type
+        if gtype == 'MultiPolygon':
+            return geom
+        if gtype == 'Polygon':
+            return MultiPolygon(geom)
+        if gtype == 'GeometryCollection':
+            polys = []
+            for part in geom:
+                if part.geom_type == 'Polygon':
+                    polys.append(part)
+                elif part.geom_type == 'MultiPolygon':
+                    polys.extend(list(part))
+            return MultiPolygon(*polys) if polys else None
+        return None
+
+    # ------------------------------------------------------------------
     # Main handle
     # ------------------------------------------------------------------
     def handle(self, *args, **options):
@@ -160,40 +183,49 @@ class Command(BaseCommand):
 
                     imported = 0
                     errors = 0
+                    forets_touched = set()
 
                     for _, row in gdf.iterrows():
                         try:
                             geom = GEOSGeometry(row.geometry.wkt, srid=4326)
-                            if geom.geom_type == 'Polygon':
-                                geom = MultiPolygon(geom)
-                            elif geom.geom_type != 'MultiPolygon':
+                            if geom.geom_type not in ('Polygon', 'MultiPolygon'):
                                 errors += 1
                                 continue
 
-                            # Find which forest this polygon belongs to
-                            target_foret = None
+                            # Découpage par forêt : un polygone de couvert (souvent
+                            # dissous sur toute la zone) est intersecté avec CHAQUE
+                            # forêt qu'il touche → un enregistrement par forêt, avec
+                            # la géométrie réellement contenue dans cette forêt.
+                            matched = False
                             for code, foret in forets.items():
-                                if foret.geom.intersects(geom):
-                                    target_foret = foret
-                                    break
+                                if not foret.geom.intersects(geom):
+                                    continue
+                                clipped = self._to_multipolygon(
+                                    foret.geom.intersection(geom)
+                                )
+                                if clipped is None:
+                                    continue
 
-                            if not target_foret:
-                                target_foret = list(forets.values())[0]
+                                OccupationSol.objects.create(
+                                    foret=foret,
+                                    nomenclature=nomenclature,
+                                    annee=annee,
+                                    geom=clipped,
+                                    source_donnee=f'Shapefile {actual_name}',
+                                )
+                                imported += 1
+                                matched = True
+                                forets_touched.add(code)
 
-                            OccupationSol.objects.create(
-                                foret=target_foret,
-                                nomenclature=nomenclature,
-                                annee=annee,
-                                geom=geom,
-                                source_donnee=f'Shapefile {actual_name}',
-                            )
-                            imported += 1
+                            if not matched:
+                                errors += 1
 
                         except Exception:
                             errors += 1
 
                     self.stdout.write(self.style.SUCCESS(
-                        f'    {cover_code}: {imported} imported, {errors} errors'
+                        f'    {cover_code}: {imported} imported '
+                        f'({len(forets_touched)} forets: {sorted(forets_touched)}), {errors} errors'
                     ))
 
                 except Exception as e:

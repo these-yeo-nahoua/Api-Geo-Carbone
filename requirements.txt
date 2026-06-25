@@ -31,6 +31,9 @@ crispy-bootstrap5>=0.7
 # Dev tools
 python-dotenv>=1.0.0
 
+# ===== AI / Mistral =====
+mistralai>=1.0.0
+
 # ===== Production (Render) =====
 gunicorn>=21.2.0
 whitenoise[brotli]>=6.6.0

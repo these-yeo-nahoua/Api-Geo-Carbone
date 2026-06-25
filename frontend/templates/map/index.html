@@ -4,7 +4,8 @@
 {% block title %}Carte interactive — API.GEO.Carbone{% endblock %}
 
 {% block head_leaflet %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{# MapLibre GL JS remplace Leaflet — WebGL, performances extrêmes #}
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
 {% endblock %}
 
 {% block extra_css %}
@@ -14,8 +15,8 @@
 {% block content %}
 <div id="app" class="relative w-full h-screen overflow-hidden">
 
-    <!-- ===== SIDEBAR ===== -->
-    <div id="sidebar" class="absolute top-0 left-0 h-full w-80 bg-white shadow-2xl z-[1000] transition-transform duration-300 flex flex-col overflow-hidden lg:translate-x-0 -translate-x-full">
+    <!-- ===== SIDEBAR (flottante) ===== -->
+    <div id="sidebar" class="absolute top-4 left-4 w-80 max-h-[calc(100vh-2rem)] bg-white/95 backdrop-blur-md shadow-2xl rounded-2xl border border-gray-200/50 z-[1000] transition-transform duration-300 flex flex-col overflow-hidden lg:translate-x-0 -translate-x-[120%]">
         <!-- Header -->
         <div class="p-4 bg-gradient-to-r from-forest-900 to-forest-800 text-white flex items-center justify-between">
             <a href="/" class="flex items-center gap-2.5 group">
@@ -85,7 +86,9 @@
             <!-- Legend -->
             <div id="tab-legend" class="tab-content p-3 hidden">
                 <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Types de couverture</div>
-                <div id="legend-list" class="space-y-1.5"></div>
+                <div id="legend-list" class="space-y-1.5">
+                    <!-- Rempli par Legend.init() -->
+                </div>
             </div>
 
             <!-- Stats -->
@@ -143,26 +146,21 @@
     <!-- Sidebar Toggle (mobile) -->
     <button id="sidebar-toggle" class="absolute top-4 left-4 z-[1001] bg-white shadow-lg rounded-xl p-2.5 lg:hidden hover:bg-gray-50 border border-gray-100"><i class="fas fa-bars text-gray-600"></i></button>
 
-    <!-- ===== MAP ===== -->
+    <!-- ===== MAP (MapLibre GL JS) ===== -->
     <div id="map" class="w-full h-full"></div>
 
     <!-- ===== TIME SLIDER ===== -->
     <div id="time-slider" class="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] bg-white/95 backdrop-blur-md shadow-2xl rounded-2xl px-5 py-3 flex items-center gap-3 border border-gray-200/50 transition-all duration-300">
-        <!-- Play/Pause button -->
         <button id="time-play" class="w-9 h-9 rounded-xl bg-forest-100 text-forest-700 hover:bg-forest-200 flex items-center justify-center transition-all duration-200"><i class="fas fa-play text-sm"></i></button>
-        <!-- Year buttons group -->
         <div class="flex items-center rounded-xl overflow-hidden border border-gray-200 transition-all duration-300">
             <button class="time-btn px-5 py-2 text-sm font-bold" data-year="1986">1986</button>
             <button class="time-btn px-5 py-2 text-sm font-bold" data-year="2003">2003</button>
             <button class="time-btn px-5 py-2 text-sm font-bold" data-year="2023">2023</button>
         </div>
-        <!-- Separator -->
         <div class="w-px h-8 bg-gray-300 transition-colors duration-300"></div>
-        <!-- CO2 Stock Carbone button -->
         <button id="btn-stock-carbone" class="carbone-btn px-4 py-2 text-sm font-bold rounded-xl transition-all duration-300" title="Spatialisation du Stock Carbone 2023 (tCO2/ha)">
             <i class="fas fa-leaf mr-1.5 text-xs"></i>CO<sub>2</sub>
         </button>
-        <!-- Current mode label -->
         <span id="time-label" class="text-xs text-gray-400 font-medium min-w-[55px] transition-all duration-300">1986</span>
     </div>
 
@@ -172,12 +170,12 @@
         <a href="/enjeux/" class="bg-white/90 backdrop-blur-sm shadow-lg rounded-xl px-3 py-2 text-sm text-gray-600 hover:text-forest-700 hover:bg-white transition-all border border-gray-200/50 flex items-center gap-1.5"><i class="fas fa-fire-alt text-xs"></i> Enjeux</a>
     </div>
 
-    <!-- Chat Toggle v4 -->
+    <!-- Chat Toggle v5 -->
     <button id="chat-toggle" class="absolute bottom-4 sm:bottom-6 right-4 sm:right-6 z-[1000] text-white shadow-xl rounded-2xl w-12 h-12 flex items-center justify-center transition-all"><i class="fas fa-robot text-lg"></i></button>
 
-    <!-- Chat Panel v4 — Glassmorphism + Particles -->
-    <div id="chat-panel" class="hidden fixed sm:absolute bottom-0 sm:bottom-20 right-0 sm:right-6 z-[1001] sm:z-[1000] w-full sm:w-[400px] h-[78vh] sm:h-auto sm:max-h-[560px] sm:rounded-2xl flex flex-col border-t sm:border overflow-hidden" style="position:relative;">
-        <!-- Header v4 -->
+    <!-- Chat Panel v5 — Glassmorphism -->
+    <div id="chat-panel" class="hidden fixed sm:absolute bottom-0 sm:bottom-20 right-0 sm:right-6 z-[1001] sm:z-[1000] w-full sm:w-[400px] h-[78vh] sm:h-auto sm:max-h-[560px] sm:rounded-2xl flex flex-col border-t sm:border overflow-hidden">
+        <!-- Header -->
         <div class="chat-header-v4 text-white flex items-center justify-between flex-shrink-0">
             <div class="flex items-center gap-3">
                 <div class="ai-avatar">
@@ -187,20 +185,18 @@
                     <div class="text-sm font-bold tracking-tight">GEO-Carbone IA</div>
                     <div class="flex items-center gap-1.5">
                         <span class="status-dot"></span>
-                        <span class="text-[10px] text-green-300/80">En ligne</span>
+                        <span class="text-[10px] text-green-300/80">En ligne · Mistral AI</span>
                         <span id="chat-context-badge" class="context-badge hidden ml-1"></span>
                     </div>
                 </div>
             </div>
             <button id="chat-close" class="text-green-200/60 hover:text-white transition-colors"><i class="fas fa-times text-lg"></i></button>
         </div>
-        <!-- Messages area with floating particles -->
+        <!-- Messages -->
         <div id="chat-messages" class="flex-1 overflow-y-auto p-3 space-y-3 min-h-[200px]" style="position:relative; z-index:1;">
-            <!-- Floating leaf particles -->
             <div class="chat-particles" id="chat-particles"></div>
-            <!-- Welcome message (rendered by JS) -->
         </div>
-        <!-- Input area v4 -->
+        <!-- Input -->
         <div class="p-3 border-t border-gray-100/50 bg-white/60 backdrop-blur-sm flex-shrink-0">
             <div class="flex gap-2 items-center">
                 <input type="text" id="chat-input" placeholder="Posez votre question..." class="flex-1 text-sm border border-gray-200/60 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white/80 backdrop-blur-sm placeholder-gray-400" />
@@ -234,15 +230,18 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{# MapLibre GL JS — WebGL renderer, remplace Leaflet #}
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
+{# Modules carte — ordre important #}
 <script src="{% static 'js/map/api.js' %}"></script>
-<script src="{% static 'js/map/layers.js' %}"></script>
+<script src="{% static 'js/map/popup.js' %}"></script>
 <script src="{% static 'js/map/choropleth.js' %}"></script>
+<script src="{% static 'js/map/layers.js' %}"></script>
 <script src="{% static 'js/map/timeSlider.js' %}"></script>
 <script src="{% static 'js/map/sidebar.js' %}"></script>
 <script src="{% static 'js/map/legend.js' %}"></script>
 <script src="{% static 'js/map/stats.js' %}"></script>
-<script src="{% static 'js/map/popup.js' %}"></script>
 <script src="{% static 'js/map/report.js' %}"></script>
 <script src="{% static 'js/chat/chatPanel.js' %}"></script>
 <script src="{% static 'js/map/app.js' %}"></script>

@@ -66,6 +66,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.gzip.GZipMiddleware',
+    'django.middleware.http.ConditionalGetMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -213,6 +214,11 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50 MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800
 
 # Shapefile data path
+# ──────────────────────────────────────────────
+# Mistral AI
+# ──────────────────────────────────────────────
+MISTRAL_API_KEY = os.environ.get('MISTRAL_API_KEY', '')
+
 SHAPEFILE_DATA_DIR = os.environ.get(
-    'SHAPEFILE_DATA_DIR', r'C:\Users\LENOVO\Documents\DATA YEO ALL'
+    'SHAPEFILE_DATA_DIR', r'C:\Users\LENOVO\Pictures\DATA YEO ALL'
 )

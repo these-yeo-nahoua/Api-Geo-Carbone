@@ -43,3 +43,7 @@ Thumbs.db
 
 # Tailwind build output (regenerated)
 frontend/static/css/tailwind-output.css
+
+# Données sources temporaires (shapefiles lourds, non versionnés)
+media/geocache/_carbone_tmp/
+nul

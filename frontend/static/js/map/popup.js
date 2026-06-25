@@ -11,7 +11,16 @@ const PopupBuilder = {
                 <div class="row"><span class="label">Superficie</span><span class="value">${props.superficie_ha ? props.superficie_ha.toLocaleString('fr', {maximumFractionDigits: 1}) + ' ha' : '-'}</span></div>
                 <div class="row"><span class="label">Stock carbone</span><span class="value">${props.stock_carbone_calcule ? props.stock_carbone_calcule.toLocaleString('fr', {maximumFractionDigits: 0}) + ' tCO2/ha' : '-'}</span></div>
                 <div class="row"><span class="label">Source</span><span class="value">${props.source_donnee || '-'}</span></div>
+                ${this._targetBtn(props.foret_code)}
             </div>`;
+    },
+
+    /** Bouton « Cibler cette forêt » — zoome et filtre sur la forêt au clic. */
+    _targetBtn(code) {
+        if (!code) return '';
+        return `<button type="button" class="popup-target-btn" onclick="App.targetForet('${code}')">
+            <i class="fas fa-crosshairs"></i> Cibler cette forêt
+        </button>`;
     },
 
     stockCarbone(props) {
@@ -48,6 +57,7 @@ const PopupBuilder = {
                 <div class="row"><span class="label">Code</span><span class="value">${props.code || '-'}</span></div>
                 <div class="row"><span class="label">Superficie legale</span><span class="value">${props.superficie_legale_ha ? props.superficie_legale_ha.toLocaleString('fr') + ' ha' : '-'}</span></div>
                 <div class="row"><span class="label">Gestion</span><span class="value">${props.autorite_gestion || '-'}</span></div>
+                ${this._targetBtn(props.code)}
             </div>`;
     },
 

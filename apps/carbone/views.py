@@ -18,6 +18,7 @@ import json
 from django.db import connection
 from django.http import JsonResponse, FileResponse
 from django.conf import settings
+from django.utils.http import http_date
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -118,10 +119,13 @@ def _serve_cached(filename):
     Serve a pre-built GeoJSON file from media/geocache/ as FileResponse.
     Returns None if file doesn't exist (caller should fall back to SQL).
 
-    Response includes:
-      - Content-Type: application/json
-      - Cache-Control: public, max-age=3600 (1h browser cache)
-      - X-GeoCache: HIT header for debugging
+    Caching strategy — freshness WITHOUT losing speed:
+      - Last-Modified is set from the file's mtime.
+      - Cache-Control: no-cache forces the browser to revalidate each time.
+      - Combined with ConditionalGetMiddleware, an unchanged file returns a
+        tiny 304 (~10-30ms); a rebuilt file (new mtime) returns fresh 200 data.
+      This avoids the classic "stale data for 1h after a rebuild" trap while
+      keeping repeat loads fast.
     """
     path = os.path.join(GEOCACHE_DIR, filename)
     if os.path.isfile(path):
@@ -129,7 +133,8 @@ def _serve_cached(filename):
             open(path, 'rb'),
             content_type='application/json',
         )
-        response['Cache-Control'] = 'public, max-age=3600'
+        response['Last-Modified'] = http_date(os.path.getmtime(path))
+        response['Cache-Control'] = 'no-cache'
         response['X-GeoCache'] = 'HIT'
         return response
     return None
