@@ -14,19 +14,40 @@ apt-get update && apt-get install -y --no-install-recommends \
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# Activer extension PostGIS sur la base de donnees
+# Attendre que la base soit joignable PUIS activer l'extension PostGIS.
+# Retry sur erreur DNS/connexion : sur Render free-tier la base peut mettre
+# du temps a provisionner (ou son DNS a se propager) apres (re)creation.
 python -c "
-import dj_database_url, psycopg2, os
+import dj_database_url, psycopg2, os, sys, time
+
 db = dj_database_url.config(default=os.environ.get('DATABASE_URL'))
-conn = psycopg2.connect(
-    dbname=db['NAME'], user=db['USER'],
-    password=db['PASSWORD'], host=db['HOST'], port=db['PORT']
-)
-conn.autocommit = True
-cur = conn.cursor()
-cur.execute('CREATE EXTENSION IF NOT EXISTS postgis;')
-print('PostGIS extension activated.')
-conn.close()
+if not db or not db.get('HOST'):
+    print('ERREUR: DATABASE_URL non defini ou invalide.')
+    sys.exit(1)
+
+last = None
+for attempt in range(12):  # ~2 min max (12 x 10s)
+    try:
+        conn = psycopg2.connect(
+            dbname=db['NAME'], user=db['USER'], password=db['PASSWORD'],
+            host=db['HOST'], port=db['PORT'], connect_timeout=10,
+        )
+        conn.autocommit = True
+        conn.cursor().execute('CREATE EXTENSION IF NOT EXISTS postgis;')
+        conn.close()
+        print('PostGIS extension activated.')
+        break
+    except Exception as e:
+        last = e
+        print(f'Base pas encore joignable (tentative {attempt + 1}/12): {e}')
+        time.sleep(10)
+else:
+    print('ERREUR: base injoignable apres ~2 min.')
+    print('--> Verifiez sur le dashboard Render que la base PostgreSQL existe')
+    print('    et que DATABASE_URL pointe vers le bon hote. Sur le plan gratuit,')
+    print('    une base inactive depuis 90 jours est supprimee : recreez-la.')
+    print(f'Derniere erreur: {last}')
+    sys.exit(1)
 "
 
 # Appliquer les migrations
