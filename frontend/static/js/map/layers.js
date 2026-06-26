@@ -151,8 +151,7 @@ const LayerManager = {
                         2, 2.5,
                         1.5,
                     ],
-                    'line-dasharray': [8, 4],
-                    'line-opacity': 0.8,
+                    'line-opacity': 0.85,
                 },
                 layout: { visibility: 'none' },
             });

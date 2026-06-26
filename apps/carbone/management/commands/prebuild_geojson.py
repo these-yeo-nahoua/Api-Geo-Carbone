@@ -37,12 +37,12 @@ from apps.carbone.models import ForetClassee, ZoneEtude
 # These are optimized for map display at zoom 9-12 (typical overview)
 # ====================================================================
 TOLERANCES = {
-    'occupation': 0.0006,  # ~66m accuracy (good for thematic maps)
-    'forets': 0.0004,      # ~44m accuracy (preserve forest shapes)
-    'zones': 0.0008,       # ~88m accuracy (admin boundaries)
+    'occupation': 0.0003,   # ~33m — préserve les petits polygones (pas de collapse en triangle), cache léger
+    'forets': 0.0004,       # ~44m accuracy (preserve forest shapes)
+    'zones': 0.0008,        # ~88m accuracy (admin boundaries)
 }
 
-# GeoJSON coordinate precision: 4 decimals ≈ 11m accuracy
+# GeoJSON coordinate precision: 4 decimals ≈ 11m (suffisant à cette échelle)
 GEOJSON_PRECISION = 4
 
 CACHE_DIR = os.path.join(settings.MEDIA_ROOT, 'geocache')
@@ -147,8 +147,8 @@ class Command(BaseCommand):
                 'type', 'Feature',
                 'id', o.id,
                 'geometry', ST_AsGeoJSON(
-                    ST_SimplifyPreserveTopology(
-                        ST_MakeValid(o.geom), {tolerance}
+                    ST_CollectionExtract(
+                        ST_MakeValid(ST_Simplify(o.geom, {tolerance})), 3
                     ), {GEOJSON_PRECISION}
                 )::json,
                 'properties', json_build_object(

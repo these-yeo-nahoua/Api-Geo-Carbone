@@ -31,8 +31,8 @@ class Command(BaseCommand):
             help='Path to data_carb.shp',
         )
         parser.add_argument(
-            '--tolerance', type=float, default=200,
-            help='Simplification tolerance in meters (UTM, default: 200m)',
+            '--tolerance', type=float, default=50,
+            help='Simplification tolerance in meters (UTM, default: 50m — fin, évite les formes triangulaires)',
         )
         parser.add_argument(
             '--output', default=None,
