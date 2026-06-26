@@ -37,7 +37,7 @@ from apps.carbone.models import ForetClassee, ZoneEtude
 # These are optimized for map display at zoom 9-12 (typical overview)
 # ====================================================================
 TOLERANCES = {
-    'occupation': 0.0003,   # ~33m — préserve les petits polygones (pas de collapse en triangle), cache léger
+    'occupation': 0.0005,   # ~55m base grossière PUIS lissée par ST_ChaikinSmoothing (courbes lisses)
     'forets': 0.0004,       # ~44m accuracy (preserve forest shapes)
     'zones': 0.0008,        # ~88m accuracy (admin boundaries)
 }
@@ -147,8 +147,10 @@ class Command(BaseCommand):
                 'type', 'Feature',
                 'id', o.id,
                 'geometry', ST_AsGeoJSON(
-                    ST_CollectionExtract(
-                        ST_MakeValid(ST_Simplify(o.geom, {tolerance})), 3
+                    ST_ChaikinSmoothing(
+                        ST_CollectionExtract(
+                            ST_MakeValid(ST_Simplify(o.geom, {tolerance})), 3
+                        ), 2, true
                     ), {GEOJSON_PRECISION}
                 )::json,
                 'properties', json_build_object(

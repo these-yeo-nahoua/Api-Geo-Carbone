@@ -12,6 +12,7 @@ import os
 import json
 import geopandas as gpd
 from shapely.validation import make_valid
+from shapely.geometry import Polygon, MultiPolygon
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from apps.carbone.constants import (
@@ -20,6 +21,44 @@ from apps.carbone.constants import (
     NOMENCLATURE_DATA,
     STOCK_CARBONE_REFERENCE,
 )
+
+
+# ---------------------------------------------------------------------------
+# Lissage Chaikin (corner-cutting) — transforme les bords anguleux/pixelisés
+# en courbes lisses par interpolation des sommets. Équivalent shapely de
+# ST_ChaikinSmoothing (utilisé pour l'occupation côté PostGIS).
+# ---------------------------------------------------------------------------
+def _chaikin_ring(coords, iterations):
+    pts = [(float(x), float(y)) for x, y in coords]
+    for _ in range(iterations):
+        new = []
+        for i in range(len(pts) - 1):
+            x0, y0 = pts[i]
+            x1, y1 = pts[i + 1]
+            new.append((0.75 * x0 + 0.25 * x1, 0.75 * y0 + 0.25 * y1))
+            new.append((0.25 * x0 + 0.75 * x1, 0.25 * y0 + 0.75 * y1))
+        if new:
+            new.append(new[0])  # refermer l'anneau
+        pts = new
+    return pts
+
+
+def _chaikin_polygon(poly, iterations):
+    ext = _chaikin_ring(poly.exterior.coords, iterations)
+    holes = [_chaikin_ring(r.coords, iterations) for r in poly.interiors]
+    return Polygon(ext, holes)
+
+
+def chaikin_smooth(geom, iterations=2):
+    """Lisse un Polygon / MultiPolygon par corner-cutting de Chaikin."""
+    try:
+        if geom.geom_type == 'Polygon':
+            return _chaikin_polygon(geom, iterations)
+        if geom.geom_type == 'MultiPolygon':
+            return MultiPolygon([_chaikin_polygon(p, iterations) for p in geom.geoms])
+    except Exception:
+        pass
+    return geom
 
 
 class Command(BaseCommand):
@@ -31,8 +70,8 @@ class Command(BaseCommand):
             help='Path to data_carb.shp',
         )
         parser.add_argument(
-            '--tolerance', type=float, default=50,
-            help='Simplification tolerance in meters (UTM, default: 50m — fin, évite les formes triangulaires)',
+            '--tolerance', type=float, default=100,
+            help='Simplification tolerance in meters (UTM, default: 100m — base grossière puis lissée par Chaikin)',
         )
         parser.add_argument(
             '--output', default=None,
@@ -65,14 +104,16 @@ class Command(BaseCommand):
         self.stdout.write('Computing areas...')
         gdf['superficie_ha'] = gdf.geometry.area / 10000.0
 
-        # -- Step 3: Simplify in UTM (meters, much faster than degrees) --
-        # IMPORTANT : preserve_topology=False (Douglas-Peucker) est O(n log n) et
-        # rapide ; preserve_topology=True se fige sur ces géométries massives
-        # (millions de vertex). On simplifie D'ABORD (réduit les vertex), PUIS on
-        # valide (make_valid rapide car peu de points), pour éviter le blocage.
+        # -- Step 3: Simplify in UTM (meters) PUIS lissage Chaikin --
+        # preserve_topology=False (Douglas-Peucker) rapide et O(n log n) ;
+        # preserve_topology=True se fige sur ces géométries massives.
+        # On simplifie grossièrement (réduit les vertex + le bruit pixel), PUIS
+        # ST_Chaikin arrondit les coins en courbes lisses (fin du triangulaire).
         self.stdout.write('Simplifying (tolerance=%sm, Douglas-Peucker)...' % int(tolerance))
         gdf['geometry'] = gdf.geometry.simplify(tolerance, preserve_topology=False)
-        self.stdout.write('  Simplified. Validating...')
+        self.stdout.write('  Lissage Chaikin (interpolation des sommets)...')
+        gdf['geometry'] = gdf.geometry.apply(lambda g: chaikin_smooth(g, 2))
+        self.stdout.write('  Validating...')
         gdf['geometry'] = gdf.geometry.apply(make_valid)
         self.stdout.write('  Done.')
 
