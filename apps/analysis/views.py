@@ -283,8 +283,8 @@ class AIQueryView(APIView):
         labels, sup_vals, carb_vals, colors = [], [], [], []
         for s in stats_list:
             labels.append(s.get('nomenclature__libelle_fr') or s.get('nomenclature__code', '?'))
-            sup_vals.append(round(float(s.get('total_superficie_ha', 0)), 1))
-            carb_vals.append(round(float(s.get('total_carbone', 0)), 1))
+            sup_vals.append(round(float(s.get('total_superficie_ha') or 0), 1))
+            carb_vals.append(round(float(s.get('total_carbone') or 0), 1))
             colors.append(s.get('nomenclature__couleur_hex', '#999'))
         return {'labels': labels, 'colors': colors, 'superficie': sup_vals, 'carbone': carb_vals}
 
@@ -293,11 +293,11 @@ class AIQueryView(APIView):
             return None
         a1, a2 = comparison.get('annee1', {}), comparison.get('annee2', {})
         labels, values1, values2, colors = [], [], [], []
-        map2 = {s.get('nomenclature__code'): round(float(s.get('superficie_ha', 0)), 1) for s in (a2.get('data') or [])}
+        map2 = {s.get('nomenclature__code'): round(float(s.get('superficie_ha') or 0), 1) for s in (a2.get('data') or [])}
         for s in (a1.get('data') or []):
             code = s.get('nomenclature__code', '')
             labels.append(s.get('nomenclature__libelle_fr', code))
-            values1.append(round(float(s.get('superficie_ha', 0)), 1))
+            values1.append(round(float(s.get('superficie_ha') or 0), 1))
             values2.append(map2.get(code, 0))
             colors.append(s.get('nomenclature__couleur_hex', '#999'))
         return {'labels': labels, 'colors': colors, 'annee1': a1.get('annee'), 'values1': values1, 'annee2': a2.get('annee'), 'values2': values2}

@@ -156,20 +156,45 @@ class OccupationSol(models.Model):
         return f"{self.foret.code} - {self.nomenclature.code} ({self.annee})"
 
     def save(self, *args, **kwargs):
+        # 1) Persister d'abord la geometrie (et obtenir un id).
+        super().save(*args, **kwargs)
+
+        recompute = False
+
+        # 2) Superficie (ha) calculee cote PostGIS via geography (geodesique).
+        #    On evite volontairement geom.transform() cote client : sur Windows,
+        #    la DLL GDAL ne "voit" pas PROJ_DATA defini depuis Python et la
+        #    reprojection echoue silencieusement -> superficie NULL -> stats a 0.
+        #    ST_Area(::geography) est fait par le serveur, portable (local + Neon).
         if self.geom and not self.superficie_ha:
             try:
-                geom_utm = self.geom.transform(32630, clone=True)
-                self.superficie_ha = geom_utm.area / 10000.0
+                from django.db import connection
+                with connection.cursor() as cur:
+                    cur.execute(
+                        "SELECT ST_Area(geom::geography) / 10000.0 "
+                        "FROM carbone_occupationsol WHERE id = %s",
+                        [self.pk],
+                    )
+                    row = cur.fetchone()
+                if row and row[0] is not None:
+                    self.superficie_ha = row[0]
+                    recompute = True
             except Exception:
                 pass
+
+        # 3) Stock TOTAL du polygone (tCO2) = superficie (ha) x reference (tCO2/ha).
+        #    Les stats/evolution SOMMENT ce champ comme total tCO2.
         if self.superficie_ha and self.nomenclature_id and not self.stock_carbone_calcule:
             try:
                 ref = self.nomenclature.stock_carbone_reference
                 if ref:
-                    self.stock_carbone_calcule = ref
+                    self.stock_carbone_calcule = self.superficie_ha * ref
+                    recompute = True
             except Exception:
                 pass
-        super().save(*args, **kwargs)
+
+        if recompute:
+            super().save(update_fields=['superficie_ha', 'stock_carbone_calcule'])
 
 
 class Placette(models.Model):

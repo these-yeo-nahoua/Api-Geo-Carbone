@@ -56,6 +56,13 @@ class Command(BaseCommand):
             self.stdout.write(f'  Importing: {infra["file"]} as {infra["type_infra"]}')
             try:
                 gdf = gpd.read_file(shp_path)
+                # Certains shapefiles (ex. Localites_departement_Oume) n'ont pas
+                # de fichier .prj -> CRS absent. Les donnees SIG d'Oume sont en
+                # UTM Zone 30N (EPSG:32630), comme les autres couches SIG_DATA.
+                if gdf.crs is None:
+                    gdf = gdf.set_crs(epsg=32630)
+                    self.stdout.write(self.style.WARNING(
+                        '    CRS absent (.prj manquant) -> EPSG:32630 assume'))
                 gdf = gdf.to_crs(epsg=4326)
                 imported = 0
 

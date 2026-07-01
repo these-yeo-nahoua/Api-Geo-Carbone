@@ -6,25 +6,47 @@ from datetime import timedelta
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # ──────────────────────────────────────────────
+# Chargement du fichier .env (développement local)
+# En production (Render/Railway/Neon), les variables sont fournies par
+# l'hébergeur : load_dotenv() n'écrase pas les variables déjà définies.
+# ──────────────────────────────────────────────
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / '.env')
+except ImportError:
+    pass
+
+# ──────────────────────────────────────────────
 # GDAL / GEOS / PROJ — auto-détection par OS
 # ──────────────────────────────────────────────
 if sys.platform == 'win32':
-    GDAL_LIBRARY_PATH = os.environ.get(
-        'GDAL_LIBRARY_PATH',
-        r'C:\Program Files\PostgreSQL\18\bin\libgdal-35.dll',
-    )
-    GEOS_LIBRARY_PATH = os.environ.get(
-        'GEOS_LIBRARY_PATH',
-        r'C:\Program Files\PostgreSQL\18\bin\libgeos_c.dll',
-    )
-    os.environ['PATH'] = (
-        r'C:\Program Files\PostgreSQL\18\bin' + ';' + os.environ.get('PATH', '')
-    )
-    os.environ.setdefault('GDAL_DATA', r'C:\Program Files\PostgreSQL\18\share\gdal')
-    os.environ.setdefault(
-        'PROJ_LIB', r'C:\Program Files\PostgreSQL\18\share\contrib\postgis-3.6\proj'
-    )
-# Sur Linux (Render, Docker, etc.) les libs sont dans le PATH système
+    # Ajout du dossier bin de votre PostgreSQL portable au PATH système
+    os.environ['PATH'] = r'C:\pgsql\bin' + ';' + os.environ.get('PATH', '')
+    
+    # Détection automatique de la DLL GDAL présente dans votre dossier bin
+    import glob
+    gdal_dlls = glob.glob(r'C:\pgsql\bin\libgdal-*.dll')
+    if gdal_dlls:
+        GDAL_LIBRARY_PATH = gdal_dlls[0]
+    else:
+        GDAL_LIBRARY_PATH = r'C:\pgsql\bin\libgdal-35.dll' # Valeur de secours
+        
+    GEOS_LIBRARY_PATH = r'C:\pgsql\bin\libgeos_c.dll'
+    
+    # Chemins vers les données partagées du bundle PostGIS
+    os.environ.setdefault('GDAL_DATA', r'C:\pgsql\share\gdal')
+    
+    # Détection automatique du dossier proj (contenant proj.db)
+    proj_dirs = glob.glob(r'C:\pgsql\share\contrib\postgis-*\proj')
+    proj_dir = proj_dirs[0] if proj_dirs else r'C:\pgsql\share\contrib\postgis-3.4\proj'
+    # PROJ 9 (livré avec GDAL 3.9) lit PROJ_DATA en priorité ; PROJ_LIB est
+    # l'ancien nom conservé pour compatibilité. Sans PROJ_DATA, les reprojections
+    # (ex. calcul de superficie en UTM dans OccupationSol.save) échouent
+    # silencieusement -> superficie_ha/stock_carbone NULL -> stats à 0.
+    # Affectation directe (pas setdefault) pour écraser une valeur périmée.
+    os.environ['PROJ_DATA'] = proj_dir
+    os.environ['PROJ_LIB'] = proj_dir
+
 
 # ──────────────────────────────────────────────
 # Sécurité
@@ -97,19 +119,21 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
+
 # ──────────────────────────────────────────────
 # Database — PostGIS
 # ──────────────────────────────────────────────
 DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': os.environ.get('DB_NAME', 'api_geo_carbone'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'Lynkwb123.'),
+        'NAME': os.environ.get('DB_NAME', 'api_geo_db'),
+        'USER': os.environ.get('DB_USER', 'PC 2'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
+
 
 # Custom user model
 AUTH_USER_MODEL = 'accounts.User'
